@@ -31,6 +31,12 @@ npm install
 npx expo start
 ```
 
+如果移动设备与PC不在同一局域网使用如下命令运行
+```bash
+npm install
+npx expo start --tunnel -c
+```
+
 ## Replace model
 
 - Replace assets/models/model.glb with your own file (same filename).
