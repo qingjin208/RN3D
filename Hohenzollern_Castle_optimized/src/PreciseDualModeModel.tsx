@@ -250,7 +250,7 @@ export function PreciseDualModeModel({
 
 
 
-  // Cut Body 模式的材质 - 显示被切掉的部分
+  // Cut Body 模式：保留原材质颜色，仅叠加轻微高亮特效
   const cutBodyMaterial = useMemo(() => {
     if (!clippingPlane || mode !== 'cutBody') return null
 
@@ -259,31 +259,34 @@ export function PreciseDualModeModel({
       -clippingPlane.constant
     )
 
-    const material = new THREE.MeshBasicMaterial({
-      color: capColor,
-      side: THREE.DoubleSide,
-      transparent: false,
-      opacity: 1.0,
-      depthWrite: true,
-      depthTest: true,
-      fog: false,
-      clippingPlanes: [reversePlane],
-      clipShadows: true,
-    })
-    
+    const material = materials.HZ3_Material_u1_v1.clone()
+    material.side = THREE.DoubleSide
+    material.transparent = true
+    material.opacity = 0.9
+    material.clippingPlanes = [reversePlane]
+    material.clipShadows = true
+
+    // 轻微冷色发光，保留原本纹理与颜色层次
+    material.emissive = new THREE.Color('#6fb7ff')
+    material.emissiveIntensity = 0.12
+    material.clearcoat = 0.5
+    material.clearcoatRoughness = 0.35
+
     material.needsUpdate = true
 
-    console.log('🔴 切割体材质:', {
+    console.log('🔵 切割体材质:', {
       type: material.type,
       color: '#' + material.color.getHexString(),
+      opacity: material.opacity,
+      transparent: material.transparent,
       clippingPlanes: 'reverse',
-      note: '显示被切掉的部分'
+      note: '保留原材质并叠加轻微高亮'
     })
 
     return material
-  }, [clippingPlane, capColor, mode])
+  }, [clippingPlane, mode, materials.HZ3_Material_u1_v1])
 
-  // ⚠️ 关键：为 Cut Body 模式添加截面填充
+  // Cut Body 截面填充：使用原材质颜色的提亮版，避免纯红色块
   const cutBodyCapMaterial = useMemo(() => {
     if (!clippingPlane || mode !== 'cutBody') return null
 
@@ -293,11 +296,17 @@ export function PreciseDualModeModel({
       -clippingPlane.constant
     )
 
-    const material = new THREE.MeshBasicMaterial({
-      color: capColor,
-      side: THREE.DoubleSide,  // 双面渲染，确保可见
+    const sectionColor = materials.HZ3_Material_u1_v1.color.clone().lerp(new THREE.Color('#ffffff'), 0.25)
+
+    const material = new THREE.MeshStandardMaterial({
+      color: sectionColor,
+      emissive: sectionColor.clone(),
+      emissiveIntensity: 0.2,
+      side: THREE.DoubleSide,
       transparent: false,
       opacity: 1.0,
+      roughness: 0.35,
+      metalness: 0.15,
       depthWrite: true,
       depthTest: true,
       fog: false,
@@ -312,11 +321,11 @@ export function PreciseDualModeModel({
       color: '#' + material.color.getHexString(),
       clippingPlanes: 'reverse (single plane)',
       side: 'DoubleSide',
-      note: '填充切割体的截面'
+      note: '原色提亮的截面填充'
     })
 
     return material
-  }, [clippingPlane, capColor, mode])
+  }, [clippingPlane, mode, materials.HZ3_Material_u1_v1])
 
   if (!mainMaterial) return null
 
@@ -333,18 +342,35 @@ export function PreciseDualModeModel({
       {/* 模式1: Cut Body - 显示被切掉的部分 + 截面填充 */}
       {mode === 'cutBody' && cutBodyMaterial && cutBodyCapMaterial && showCutSection && (
         <>
-          {/* 被切掉的部分（红色实体） */}
+          {/* 被切掉的部分（原材质 + 轻微高亮） */}
           <mesh
             geometry={nodes.HZ3.geometry}
             material={cutBodyMaterial}
             renderOrder={1}
           />
           
-          {/* 截面填充（红色薄层） */}
+          {/* 线框叠加 - 增强形状识别 */}
+          <mesh
+            geometry={nodes.HZ3.geometry}
+            renderOrder={2}
+          >
+            <meshBasicMaterial
+              color="#ffffff"
+              wireframe={true}
+              transparent={true}
+              opacity={0.3}
+              clippingPlanes={[new THREE.Plane(
+                clippingPlane!.normal.clone().negate(),
+                -clippingPlane!.constant
+              )]}
+            />
+          </mesh>
+          
+          {/* 截面填充（原色提亮） */}
           <mesh
             geometry={nodes.HZ3.geometry}
             material={cutBodyCapMaterial}
-            renderOrder={2}
+            renderOrder={3}
           />
         </>
       )}
