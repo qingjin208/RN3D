@@ -7,19 +7,62 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_C:/Users/Neil.Zhen/Desktop/DJI3D/RN3D" value="3Djs3TQqHUx1p5EWulXTHaoKdve" />
+    </persistenceIdMap>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3Djs3TQqHUx1p5EWulXTHaoKdve" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "ts.external.directory.path": "D:\\Application\\Pycharm\\PyCharm 2026.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "dev",
+    "nodejs_package_manager_path": "npm",
+    "ts.external.directory.path": "D:\\Application\\Pycharm\\PyCharm 2026.1.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
+    "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-024ed6589d45-c2ffad84badb-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.23567.174" />
+      </set>
+    </attachedChunks>
+  </component>
   <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="92912412-2530-4dd3-8aa6-26d68e3c4b67" name="Changes" comment="" />
+      <created>1778806626235</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1778806626235</updated>
+      <workItem from="1778806632225" duration="656000" />
+    </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="exactExcludedFiles">
-      <list>
-        <option value="$PROJECT_DIR$/Hohenzollern_Castle_optimized/node_modules/tailwindcss/stubs/tailwind.config.cjs" />
-      </list>
-    </option>
+    <option name="version" value="3" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
   </component>
 </project>
