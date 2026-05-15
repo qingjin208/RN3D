@@ -2,7 +2,7 @@ import React, { Suspense, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stage } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib'
-import { PreciseCutModel } from './PreciseCutModel'
+import { PreciseDualModeModel } from './PreciseDualModeModel'
 
 export default function CutCakeApp() {
   const ref = useRef<OrbitControlsType>(null!)
@@ -11,6 +11,7 @@ export default function CutCakeApp() {
   const [cutDepth, setCutDepth] = useState<number>(30)  // 切割深度 0-100%
   const [cutAngle, setCutAngle] = useState<number>(0)   // 切割角度 0-360度
   const [showCutPlane, setShowCutPlane] = useState<boolean>(true)
+  const [mode, setMode] = useState<'cutBody' | 'cutFace'>('cutFace')  // 默认切割面模式
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -22,17 +23,19 @@ export default function CutCakeApp() {
           camera={{ fov: 50, position: [0, 5, 10] }}
           gl={{ 
             antialias: true,
-            localClippingEnabled: true  // ⚠️ 重要：启用本地裁剪
+            localClippingEnabled: true,  // ⚠️ 重要：启用本地裁剪
+            stencil: true  // ⚠️ 关键：启用 Stencil Buffer
           }}
         >
           <color attach="background" args={['#101010']} />
           <Suspense fallback={null}>
             <ambientLight intensity={0.5} />
             <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-            <PreciseCutModel 
+            <PreciseDualModeModel 
               cutDepth={cutDepth}
               cutAngle={cutAngle}
               showCutPlane={showCutPlane}
+              mode={mode}
               capColor="#ff6b6b"
             />
           </Suspense>
@@ -47,13 +50,13 @@ export default function CutCakeApp() {
         color: 'white',
         borderTop: '2px solid #333'
       }}>
-        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}> Silo消耗</h3>
+        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}> Silo Consumption</h3>
         
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* 切割深度输入 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', color: '#aaa' }}>
-              切割深度: {cutDepth}%
+              Cut Depth: {cutDepth}%
             </label>
             <input
               type="range"
@@ -68,7 +71,7 @@ export default function CutCakeApp() {
           {/* 切割角度输入 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', color: '#aaa' }}>
-              切割角度: {cutAngle}°
+              Cut Angle: {cutAngle}°
             </label>
             <input
               type="range"
@@ -83,7 +86,7 @@ export default function CutCakeApp() {
           {/* 数字输入框 */}
           <div style={{ display: 'flex', gap: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '12px', color: '#aaa' }}>深度 (%)</label>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>Depth (%)</label>
               <input
                 type="number"
                 min="0"
@@ -103,7 +106,7 @@ export default function CutCakeApp() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <label style={{ fontSize: '12px', color: '#aaa' }}>角度 (°)</label>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>Angle (°)</label>
               <input
                 type="number"
                 min="0"
@@ -123,6 +126,43 @@ export default function CutCakeApp() {
             </div>
           </div>
 
+          {/* 模式切换按钮 */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <label style={{ fontSize: '14px', color: '#aaa' }}>Mode:</label>
+            <button
+              onClick={() => setMode('cutFace')}
+              style={{
+                padding: '8px 16px',
+                background: mode === 'cutFace' ? '#4CAF50' : '#2a2a2a',
+                border: mode === 'cutFace' ? '2px solid #4CAF50' : '1px solid #444',
+                borderRadius: '6px',
+                color: mode === 'cutFace' ? 'white' : '#aaa',
+                fontSize: '13px',
+                fontWeight: mode === 'cutFace' ? 'bold' : 'normal',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Cut Face
+            </button>
+            <button
+              onClick={() => setMode('cutBody')}
+              style={{
+                padding: '8px 16px',
+                background: mode === 'cutBody' ? '#FF9800' : '#2a2a2a',
+                border: mode === 'cutBody' ? '2px solid #FF9800' : '1px solid #444',
+                borderRadius: '6px',
+                color: mode === 'cutBody' ? 'white' : '#aaa',
+                fontSize: '13px',
+                fontWeight: mode === 'cutBody' ? 'bold' : 'normal',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Cut Body
+            </button>
+          </div>
+
           {/* 显示切割面开关 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
@@ -133,7 +173,7 @@ export default function CutCakeApp() {
               style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             />
             <label htmlFor="showPlane" style={{ fontSize: '14px', cursor: 'pointer' }}>
-              显示切割面
+              Show the cutting surface
             </label>
           </div>
 
@@ -158,13 +198,17 @@ export default function CutCakeApp() {
             onMouseOver={(e) => e.currentTarget.style.background = '#ff5252'}
             onMouseOut={(e) => e.currentTarget.style.background = '#ff6b6b'}
           >
-            重置
+            Reset
           </button>
         </div>
 
         {/* 提示信息 */}
         <div style={{ marginTop: '15px', fontSize: '12px', color: '#888' }}>
-          💡 提示：拖动滑块或直接输入数值来调整切割位置和角度。鼠标可以旋转和缩放查看模型。
+          💡 Hint: 
+          • Cut Face: Shows only the cross-section (precise boundary matching model)
+          • Cut Body: Shows the removed part as a red solid
+          • Drag sliders or enter values to adjust cutting position and angle
+          • Mouse: rotate, zoom, and pan to view the model
         </div>
       </div>
     </div>
