@@ -2,7 +2,7 @@ import React, { Suspense, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stage } from '@react-three/drei'
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib'
-import { CutModelWithCap } from './CutModelWithCap'
+import { PreciseCutModel } from './PreciseCutModel'
 
 export default function CutCakeApp() {
   const ref = useRef<OrbitControlsType>(null!)
@@ -29,7 +29,7 @@ export default function CutCakeApp() {
           <Suspense fallback={null}>
             <ambientLight intensity={0.5} />
             <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-            <CutModelWithCap 
+            <PreciseCutModel 
               cutDepth={cutDepth}
               cutAngle={cutAngle}
               showCutPlane={showCutPlane}
@@ -47,7 +47,7 @@ export default function CutCakeApp() {
         color: 'white',
         borderTop: '2px solid #333'
       }}>
-        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>🍰 切蛋糕控制</h3>
+        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}> Silo消耗</h3>
         
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* 切割深度输入 */}

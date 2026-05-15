@@ -12,22 +12,22 @@ type GLTFResult = GLTF & {
   }
 }
 
-interface CutModelWithCapProps {
+interface PreciseCutModelProps {
   cutDepth: number
   cutAngle: number
   showCutPlane?: boolean
   capColor?: string
 }
 
-export function CutModelWithCap({ 
+export function PreciseCutModel({ 
   cutDepth, 
   cutAngle, 
   showCutPlane = true,
   capColor = '#ff6b6b'
-}: CutModelWithCapProps) {
+}: PreciseCutModelProps) {
   const { nodes, materials } = useGLTF('/Hohenzollern_Castle_optimized.glb') as GLTFResult
 
-  // ⚠️ 关键修正1：计算模型的包围盒
+  // 计算模型的包围盒
   const modelBounds = useMemo(() => {
     if (!nodes.HZ3.geometry) return null
     
@@ -53,7 +53,7 @@ export function CutModelWithCap({
     return { box, size, center }
   }, [nodes.HZ3.geometry])
 
-  // ⚠️ 关键修正2：裁剪平面计算 - 深度0=不切割，深度100=全切
+  // 裁剪平面计算 - 深度0=不切割，深度100=全切
   const clippingPlane = useMemo(() => {
     if (cutDepth <= 0 || !modelBounds) return null
 
@@ -66,7 +66,7 @@ export function CutModelWithCap({
       Math.sin(angleRad)
     )
 
-    // ⚠️ 根据模型实际包围盒计算平面位置
+    // 根据模型实际包围盒计算平面位置
     const box = modelBounds.box
     
     // 计算模型在切割方向上的投影范围
@@ -81,7 +81,6 @@ export function CutModelWithCap({
       new THREE.Vector3(box.max.x, box.max.y, box.max.z),
     ]
     
-    // 找到最小和最大投影距离
     let minDist = Infinity
     let maxDist = -Infinity
     
@@ -92,8 +91,6 @@ export function CutModelWithCap({
     })
     
     const range = maxDist - minDist
-    
-    // ⚠️ 关键：深度0=平面在minDist（不切割），深度100=平面在maxDist（全切）
     const planeDist = minDist + (range * cutDepth / 100)
     const constant = -planeDist
     
@@ -127,79 +124,67 @@ export function CutModelWithCap({
     return material
   }, [materials.HZ3_Material_u1_v1, clippingPlane])
 
-  // 切割截面材质 - 完全不透明
+  // ⚠️ 关键改进：使用模型几何体的克隆，应用反向裁剪
   const capMaterial = useMemo(() => {
     if (!clippingPlane) return null
 
+    // 使用 MeshBasicMaterial 确保完全不透明
     const material = new THREE.MeshBasicMaterial({
       color: capColor,
-      side: THREE.DoubleSide,     // 双面渲染
-      transparent: false,         // 绝对不透明
-      opacity: 1.0,               // 完全不透明
-      depthWrite: true,           // 写入深度缓冲
-      depthTest: true,            // 启用深度测试
-      fog: false,                 // 不受雾效影响
+      side: THREE.DoubleSide,
+      transparent: false,
+      opacity: 1.0,
+      depthWrite: true,
+      depthTest: true,
+      fog: false,
     })
     
     material.needsUpdate = true
 
-    console.log('🎨 封口材质（不透明）:', {
+    console.log('🎨 封口材质（精确截面）:', {
       type: material.type,
       transparent: material.transparent,
       opacity: material.opacity,
       side: material.side === THREE.DoubleSide ? 'DoubleSide' : 'FrontSide',
-      color: '#' + material.color.getHexString(),
-      depthWrite: material.depthWrite,
-      depthTest: material.depthTest
+      color: '#' + material.color.getHexString()
     })
 
     return material
   }, [clippingPlane, capColor])
 
-  // ⚠️ 关键修正3：创建完整的切割封口 - 覆盖整个截面
-  const capGeometry = useMemo(() => {
-    if (!clippingPlane || cutDepth <= 0 || cutDepth >= 100 || !modelBounds) return null
+  // ⚠️ 关键改进：创建反向裁剪平面（保留被切掉的部分）
+  const reverseClippingPlane = useMemo(() => {
+    if (!clippingPlane) return null
+    
+    // 反转法向量，保留另一侧
+    return new THREE.Plane(
+      clippingPlane.normal.clone().negate(),
+      -clippingPlane.constant
+    )
+  }, [clippingPlane])
 
-    const box = modelBounds.box
-    
-    // ⚠️ 使用模型对角线长度，确保平面完全覆盖截面
-    const diagonal = Math.sqrt(
-      Math.pow(box.max.x - box.min.x, 2) + 
-      Math.pow(box.max.y - box.min.y, 2) + 
-      Math.pow(box.max.z - box.min.z, 2)
-    )
-    
-    // 创建足够大的平面（对角线的2倍）
-    const geometry = new THREE.PlaneGeometry(diagonal * 2, diagonal * 2, 1, 1)
-    
-    // ⚠️ 关键：将平面旋转到裁剪平面的方向
-    // PlaneGeometry 默认在 XY 平面，法向量朝向 +Z
-    // 需要旋转到 clippingPlane.normal 方向
-    const quaternion = new THREE.Quaternion()
-    quaternion.setFromUnitVectors(
-      new THREE.Vector3(0, 0, 1),  // 原始法向量 (+Z)
-      clippingPlane.normal         // 目标法向量
-    )
-    
-    geometry.applyQuaternion(quaternion)
-    
-    // ⚠️ 将平面移动到裁剪平面的位置
-    // 平面方程: normal · point + constant = 0
-    // 平面中心点: point = -constant * normal
-    const position = clippingPlane.normal.clone().multiplyScalar(-clippingPlane.constant)
-    geometry.translate(position.x, position.y, position.z)
-    
-    console.log('📐 封口几何体:', { 
-      angle: cutAngle, 
-      constant: clippingPlane.constant,
-      normal: clippingPlane.normal.toArray(),
-      position: position.toArray(),
-      diagonal: diagonal,
-      planeSize: diagonal * 2
+  // 截面材质 - 应用反向裁剪
+  const capGeometryMaterial = useMemo(() => {
+    if (!reverseClippingPlane) return null
+
+    const material = new THREE.MeshBasicMaterial({
+      color: capColor,
+      side: THREE.DoubleSide,
+      transparent: false,
+      opacity: 1.0,
+      depthWrite: true,
+      depthTest: true,
+      fog: false,
+      clippingPlanes: [reverseClippingPlane],  // 反向裁剪
+      clipShadows: true,
     })
+    
+    material.needsUpdate = true
 
-    return geometry
-  }, [clippingPlane, cutDepth, cutAngle, modelBounds])
+    return material
+  }, [reverseClippingPlane, capColor])
+
+
 
   if (!mainMaterial) return null
 
@@ -213,14 +198,12 @@ export function CutModelWithCap({
         receiveShadow
       />
 
-      {/* 切割截面 - 垂直的实心封口平面 */}
-      {capGeometry && capMaterial && showCutPlane && (
+      {/* ⚠️ 切割截面 - 使用模型几何体 + 反向裁剪，只显示截面 */}
+      {capGeometryMaterial && showCutPlane && (
         <mesh
-          geometry={capGeometry}
-          material={capMaterial}
-          renderOrder={1}
-          castShadow
-          receiveShadow
+          geometry={nodes.HZ3.geometry}
+          material={capGeometryMaterial}
+          renderOrder={1}  // 确保在模型之后渲染
         />
       )}
     </group>
