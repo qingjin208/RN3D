@@ -91,41 +91,38 @@ function buildVolumeDistribution(
   // 构建累积体积分布
   const positions: number[] = []
   const cumulativeVolumes: number[] = []
-  let cumVolume = 0
   
+  // ⚠️ 关键修复：先计算总体积（一次性）
+  let totalVolume = 0
+  for (const tri of triangles) {
+    totalVolume += tri.volume
+  }
+  
+  // 对于每一层，计算从 minDist 到 currentDist 的累积体积
   for (let i = 0; i <= layers; i++) {
     const t = i / layers
     const currentDist = minDist + t * span
     
-    // 计算从 minDist 到 currentDist 之间的体积
-    let layerVolume = 0
+    // 计算从 minDist 到 currentDist 之间的累积体积
+    let cumVolume = 0
     
     for (const tri of triangles) {
       const [d1, d2, d3] = tri.dist
+      const triMinDist = Math.min(d1, d2, d3)
+      const triMaxDist = Math.max(d1, d2, d3)
       
-      // 检查三角形是否与当前层相交
-      const minTriDist = Math.min(d1, d2, d3)
-      const maxTriDist = Math.max(d1, d2, d3)
-      
-      if (maxTriDist <= minDist || minTriDist >= currentDist) {
-        // 三角形完全在当前层之外
-        continue
+      // 如果三角形完全在 currentDist 之前，全部计入
+      if (triMaxDist <= currentDist) {
+        cumVolume += tri.volume
+      } 
+      // 如果三角形与 currentDist 相交，按比例计入
+      else if (triMinDist < currentDist && triMaxDist > currentDist) {
+        const overlapRatio = (currentDist - triMinDist) / (triMaxDist - triMinDist)
+        cumVolume += tri.volume * overlapRatio
       }
-      
-      if (minTriDist >= minDist && maxTriDist <= currentDist) {
-        // 三角形完全在当前层内
-        layerVolume += tri.volume
-      } else {
-        // 三角形部分在当前层内，按比例估算
-        // 简化：使用线性插值估算重叠比例
-        const overlapStart = Math.max(minTriDist, minDist)
-        const overlapEnd = Math.min(maxTriDist, currentDist)
-        const overlapRatio = (overlapEnd - overlapStart) / (maxTriDist - minTriDist)
-        layerVolume += tri.volume * overlapRatio
-      }
+      // 否则三角形在 currentDist 之后，不计入
     }
     
-    cumVolume += layerVolume
     positions.push(currentDist)
     cumulativeVolumes.push(cumVolume)
   }
@@ -133,7 +130,7 @@ function buildVolumeDistribution(
   return {
     positions,
     cumulativeVolumes,
-    totalVolume: cumVolume
+    totalVolume
   }
 }
 
