@@ -18,6 +18,7 @@ interface PreciseDualModeModelProps {
   showCutPlane?: boolean
   mode: 'cutBody' | 'cutFace'
   capColor?: string
+  showCutBodyWireframe?: boolean
 }
 
 export function PreciseDualModeModel({ 
@@ -25,7 +26,8 @@ export function PreciseDualModeModel({
   cutAngle, 
   showCutPlane = true,
   mode = 'cutFace',
-  capColor = '#ff6b6b'
+  capColor = '#ff6b6b',
+  showCutBodyWireframe = false
 }: PreciseDualModeModelProps) {
   const { nodes, materials } = useGLTF('/Hohenzollern_Castle_optimized.glb') as GLTFResult
 
@@ -262,12 +264,12 @@ export function PreciseDualModeModel({
     const material = materials.HZ3_Material_u1_v1.clone()
     material.side = THREE.DoubleSide
     material.transparent = true
-    material.opacity = 0.9
+    material.opacity = 0.5 //Cut Body被切割区域颜色透明度（越大透明度越高）
     material.clippingPlanes = [reversePlane]
     material.clipShadows = true
 
     // 轻微冷色发光，保留原本纹理与颜色层次
-    material.emissive = new THREE.Color('#6fb7ff')
+    material.emissive = new THREE.Color('#6fb7ff')//Cut Body被切割区域颜色
     material.emissiveIntensity = 0.12
     material.clearcoat = 0.5
     material.clearcoatRoughness = 0.35
@@ -296,7 +298,7 @@ export function PreciseDualModeModel({
       -clippingPlane.constant
     )
 
-    const sectionColor = materials.HZ3_Material_u1_v1.color.clone().lerp(new THREE.Color('#ffffff'), 0.25)
+    const sectionColor = materials.HZ3_Material_u1_v1.color.clone().lerp(new THREE.Color('#ffffff'), 1)
 
     const material = new THREE.MeshStandardMaterial({
       color: sectionColor,
@@ -348,29 +350,31 @@ export function PreciseDualModeModel({
             material={cutBodyMaterial}
             renderOrder={1}
           />
-          
-          {/* 线框叠加 - 增强形状识别 */}
-          <mesh
-            geometry={nodes.HZ3.geometry}
-            renderOrder={2}
-          >
-            <meshBasicMaterial
-              color="#ffffff"
-              wireframe={true}
-              transparent={true}
-              opacity={0.3}
-              clippingPlanes={[new THREE.Plane(
-                clippingPlane!.normal.clone().negate(),
-                -clippingPlane!.constant
-              )]}
-            />
-          </mesh>
+
+          {/* 可选线框叠加 - 便于观察切割体轮廓 */}
+          {showCutBodyWireframe && (
+            <mesh
+              geometry={nodes.HZ3.geometry}
+              renderOrder={2}
+            >
+              <meshBasicMaterial
+                color="#ffffff"
+                wireframe={true}
+                transparent={true}
+                opacity={0.5}
+                clippingPlanes={[new THREE.Plane(
+                  clippingPlane!.normal.clone().negate(),
+                  -clippingPlane!.constant
+                )]}
+              />
+            </mesh>
+          )}
           
           {/* 截面填充（原色提亮） */}
           <mesh
             geometry={nodes.HZ3.geometry}
             material={cutBodyCapMaterial}
-            renderOrder={3}
+            renderOrder={showCutBodyWireframe ? 3 : 2}
           />
         </>
       )}

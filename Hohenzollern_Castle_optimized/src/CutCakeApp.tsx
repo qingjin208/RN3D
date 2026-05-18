@@ -12,6 +12,7 @@ export default function CutCakeApp() {
   const [cutAngle, setCutAngle] = useState<number>(0)   // 切割角度 0-360度
   const [showCutPlane, setShowCutPlane] = useState<boolean>(true)
   const [mode, setMode] = useState<'cutBody' | 'cutFace'>('cutFace')  // 默认切割面模式
+  const [showCutBodyWireframe, setShowCutBodyWireframe] = useState<boolean>(false)
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -37,6 +38,7 @@ export default function CutCakeApp() {
               showCutPlane={showCutPlane}
               mode={mode}
               capColor="#ff6b6b"
+              showCutBodyWireframe={showCutBodyWireframe}
             />
           </Suspense>
           <OrbitControls ref={ref} autoRotate={false} />
@@ -177,12 +179,34 @@ export default function CutCakeApp() {
             </label>
           </div>
 
+          {/* Cut Body 线框开关（仅 Cut Body 模式显示） */}
+          {mode === 'cutBody' && (
+            <button
+              onClick={() => setShowCutBodyWireframe((prev) => !prev)}
+              style={{
+                padding: '8px 16px',
+                background: showCutBodyWireframe ? '#5C6BC0' : '#2a2a2a',
+                border: showCutBodyWireframe ? '2px solid #7986CB' : '1px solid #444',
+                borderRadius: '6px',
+                color: showCutBodyWireframe ? 'white' : '#aaa',
+                fontSize: '13px',
+                fontWeight: showCutBodyWireframe ? 'bold' : 'normal',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              title="Toggle white wireframe overlay in Cut Body mode"
+            >
+              {showCutBodyWireframe ? 'Hide Cut Body Wireframe' : 'Show Cut Body Wireframe'}
+            </button>
+          )}
+
           {/* 重置按钮 */}
           <button
             onClick={() => {
               setCutDepth(0)
               setCutAngle(0)
               setShowCutPlane(true)
+              setShowCutBodyWireframe(false)
             }}
             style={{
               padding: '10px 20px',
