@@ -115,7 +115,10 @@ export function PreciseDualModeModel({
     return getProjectionRange(modelBounds.box, cutNormal)
   }, [modelBounds, cutNormal])
 
-  const effectiveMultiCutCount = Math.max(0, Math.min(12, Math.floor(multiCutCount)))
+  const effectiveMultiCutCount = Math.max(
+    0,
+    Math.floor(Number.isFinite(multiCutCount) ? multiCutCount : 0)
+  )
 
   // 裁剪平面计算
   const clippingPlane = useMemo(() => {
@@ -183,20 +186,18 @@ export function PreciseDualModeModel({
     // N 刀对应 N 个彩色分层，剩余最后一段由主材质渲染
     const step = remainingSpan / (effectiveMultiCutCount + 1)
     const layers: SequentialCutLayer[] = []
-    const epsilon = Math.max(step * 0.001, 1e-4)
+    // Keep a tiny dynamic gap to avoid coplanar flicker, but never let it swallow thin slices.
+    const epsilon = Math.min(step * 0.25, Math.max(step * 0.001, 1e-7))
 
     for (let index = 0; index < effectiveMultiCutCount; index += 1) {
       // index=0 紧贴 Cut Body 切面，依次向内（高值侧）
       const startDistance = remainingMin + step * index
       const endDistance = remainingMin + step * (index + 1)
 
+      // First layer is moved slightly inward to avoid coplanar overlap with the Cut Body split plane.
+      const adjustedStart = index === 0 ? startDistance + epsilon : startDistance
       // 仅在每层末端留极小间隙，避免与下一层或尾段主材质共面。
-      const adjustedStart = startDistance
       const adjustedEnd = endDistance - epsilon
-
-      if (adjustedEnd - adjustedStart <= 1e-5) {
-        continue
-      }
 
       layers.push({
         index,
@@ -217,6 +218,7 @@ export function PreciseDualModeModel({
       totalLayers: layers.length,
       expectedLayers: effectiveMultiCutCount,
       step,
+      epsilon,
       remainingMin,
       remainingMax,
       layers: layers.map(l => ({
@@ -237,8 +239,18 @@ export function PreciseDualModeModel({
 
     const material = materials.HZ3_Material_u1_v1.clone()
 
+    // Slightly push the tail start inward to avoid coplanar overlap with the last colored slice.
+    const tailBoundaryDistance = isMultiCutActive
+      ? (() => {
+          const lastLayer = sequentialCutLayers[sequentialCutLayers.length - 1]
+          const lastLayerSpan = Math.max(lastLayer.endDistance - lastLayer.startDistance, 0)
+          const tailBoundaryBias = Math.max(lastLayerSpan * 0.001, 1e-7)
+          return lastLayer.endDistance + tailBoundaryBias
+        })()
+      : null
+
     const activePlane = isMultiCutActive
-      ? createForwardPlane(cutNormal, sequentialCutLayers[sequentialCutLayers.length - 1].endDistance)
+      ? createForwardPlane(cutNormal, tailBoundaryDistance!)
       : clippingPlane
 
     if (activePlane) {

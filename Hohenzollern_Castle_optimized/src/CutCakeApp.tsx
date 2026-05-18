@@ -16,7 +16,7 @@ export default function CutCakeApp() {
   const [pendingCutCount, setPendingCutCount] = useState<number>(3)
   const [appliedCutCount, setAppliedCutCount] = useState<number>(0)
 
-  const clampedPendingCutCount = Math.max(0, Math.min(12, Math.floor(pendingCutCount || 0)))
+  const clampedPendingCutCount = Math.max(0, Math.floor(Number.isFinite(pendingCutCount) ? pendingCutCount : 0))
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -212,9 +212,11 @@ export default function CutCakeApp() {
               <input
                 type="number"
                 min="0"
-                max="12"
                 value={pendingCutCount}
-                onChange={(e) => setPendingCutCount(Math.max(0, Number(e.target.value) || 0))}
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  setPendingCutCount(Math.max(0, Number.isFinite(value) ? value : 0))
+                }}
                 style={{
                   width: '90px',
                   padding: '8px',
