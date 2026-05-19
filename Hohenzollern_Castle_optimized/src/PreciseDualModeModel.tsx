@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
 import { GLTF } from 'three-stdlib'
@@ -198,6 +198,9 @@ const MULTI_CUT_COLORS = [
   '#2ec4b6',
 ]
 
+const DEFAULT_MODEL_URL = '/Hohenzollern_Castle_optimized.glb'
+const DEFAULT_CUT_BODY_MASK_COLOR = '#ffffff'
+
 function getProjectionRange(box: THREE.Box3, normal: THREE.Vector3) {
   const corners = [
     new THREE.Vector3(box.min.x, box.min.y, box.min.z),
@@ -248,11 +251,13 @@ type GLTFResult = GLTF & {
 }
 
 interface PreciseDualModeModelProps {
+  modelUrl?: string
   cutDepth: number
   cutAngle: number
   showCutPlane?: boolean
   mode: 'cutBody' | 'cutFace'
   capColor?: string
+  cutBodyMaskColor?: string
   showCutBodyWireframe?: boolean
   multiCutCount?: number
   /** Cut Face 多刀模式的显示样式：
@@ -272,11 +277,13 @@ interface PreciseDualModeModelProps {
 }
 
 export function PreciseDualModeModel({ 
-  cutDepth, 
+  modelUrl = DEFAULT_MODEL_URL,
+  cutDepth,
   cutAngle, 
   showCutPlane = true,
   mode = 'cutFace',
   capColor = '#ff6b6b',
+  cutBodyMaskColor = DEFAULT_CUT_BODY_MASK_COLOR,
   showCutBodyWireframe = false,
   multiCutCount = 0,
   cutFaceMultiStyle = 'faceOnly',
@@ -285,7 +292,11 @@ export function PreciseDualModeModel({
   cutBodyRemovedOpacity = 0.5,
   cutBodyLayeredOpacity = 0.72
 }: PreciseDualModeModelProps) {
-  const { nodes, materials } = useGLTF('/Hohenzollern_Castle_optimized.glb') as GLTFResult
+  const { nodes, materials } = useGLTF(modelUrl) as GLTFResult
+
+  useEffect(() => {
+    useGLTF.preload(modelUrl)
+  }, [modelUrl])
 
   // 计算模型的包围盒
   const modelBounds = useMemo(() => {
@@ -849,7 +860,7 @@ export function PreciseDualModeModel({
     material.clipShadows = true
 
     // 轻微冷色发光，保留原本纹理与颜色层次
-    material.emissive = new THREE.Color('#6fb7ff')//Cut Body被切割区域颜色
+    material.emissive = new THREE.Color(cutBodyMaskColor)
     material.emissiveIntensity = 0.12
     material.clearcoat = 0.5
     material.clearcoatRoughness = 0.35
@@ -866,7 +877,7 @@ export function PreciseDualModeModel({
     })
 
     return material
-  }, [clippingPlane, mode, materials.HZ3_Material_u1_v1, clampedCutBodyRemovedOpacity])
+  }, [clippingPlane, mode, materials.HZ3_Material_u1_v1, clampedCutBodyRemovedOpacity, cutBodyMaskColor])
 
   // Cut Body 截面填充：使用原材质颜色的提亮版，避免纯红色块
   const cutBodyCapMaterial = useMemo(() => {
@@ -878,7 +889,7 @@ export function PreciseDualModeModel({
       -clippingPlane.constant
     )
 
-    const sectionColor = materials.HZ3_Material_u1_v1.color.clone().lerp(new THREE.Color('#ffffff'), 1)
+    const sectionColor = new THREE.Color(cutBodyMaskColor)
 
     const material = new THREE.MeshStandardMaterial({
       color: sectionColor,
@@ -907,7 +918,7 @@ export function PreciseDualModeModel({
     })
 
     return material
-  }, [clippingPlane, mode, materials.HZ3_Material_u1_v1])
+  }, [clippingPlane, mode, cutBodyMaskColor])
 
   const sequentialCutMaterials = useMemo(() => {
     if (mode !== 'cutBody' || sequentialCutLayers.length === 0) return [] as THREE.MeshPhysicalMaterial[]
@@ -1094,4 +1105,4 @@ export function PreciseDualModeModel({
   )
 }
 
-useGLTF.preload('/Hohenzollern_Castle_optimized.glb')
+useGLTF.preload(DEFAULT_MODEL_URL)

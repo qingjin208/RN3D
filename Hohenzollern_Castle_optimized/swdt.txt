@@ -1,0 +1,58 @@
+- RN3D_Element
+    - 参数
+        - 模式区分
+            - Cut  Face
+                - 切割面遮罩颜色设置
+                    - 默认值：红色
+            - Cut Body
+                - Show Cut Body Wirefame(Type:Boolean)
+                    - 备注：切割体是否显示三角线
+                - 切割体遮罩颜色设置
+                    - 默认值：白色
+                - Cut Body Depth Opacity(Type: Double)
+                    - 默认值：0.7
+        - Cut N
+            - Cut N(Type: Integer)
+                - 备注
+                    - 如果没有设置值则为不使用
+                    - 需要提供一个按钮实现去取消使用N Cuts
+                - 模块区分
+                    - Cut Face
+                        - Face N-Cuts  View
+                            - 切N份后显示的效果
+                            - Face(Face Only)
+                                - Model Opacity (Face/Both)(Type: Double)
+                                    - 默认值：0.65
+                            - Body(Body Overlay)
+                                - Overlay Opacity (Body/Both)(Type: Double)
+                                    - 默认值：0.65
+                            - Face And Body(Both)
+                                - Overlay Opacity (Body/Both)(Type: Double)
+                                    - 默认值：0.65
+                                - Model Opacity (Face/Both)(Type: Double)
+                                    - 默认值：0.65
+                    - Cut Body
+                        - Cut Body Depth Opacity(Type:Double)
+                            - 默认值：0.65
+                        - Cut Body N-Cuts Opacity(Type:Double)
+                            - 默认值：0.65
+        - 公共参数
+            - Cut Depth(Type: Double)
+            - Cut Angle(Type: Double)
+                - 默认是X轴正半轴
+                    - 备注：后期需要确定用户提供的文件那个方向为正常方向
+                        - 可以通过设置东南西北然后让用户上传时候选择从而保证从正确的方向开始切割
+            - Show the cutting surface(Type: Boolean)
+                - Body默认显示
+                - Face默认不显示
+            - 画面朝向(Type: Integer)
+                - 共12个方向（相当于钟表的十二个点位，z为钟表中心点）
+                    - 设y的负半轴为12点钟方向，所以x轴正半轴为3点钟方向
+                        - 默认为4点钟方向
+            - 画面是否可以旋转
+                - 默认值为False
+            - 画面是否可以拖动
+                - 默认值为False
+            - 模型自动旋转
+                - 默认值：False
+        - 指定渲染的glb模型文件
