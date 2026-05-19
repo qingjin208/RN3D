@@ -255,6 +255,20 @@ interface PreciseDualModeModelProps {
   capColor?: string
   showCutBodyWireframe?: boolean
   multiCutCount?: number
+  /** Cut Face 多刀模式的显示样式：
+   *  'faceOnly'  - 只显示彩色截面，并降低主模型不透明度
+   *  'bodyOnly'  - 只显示彩色实体覆盖层（增强可见性）
+   *  'both'      - 同时显示截面和实体覆盖层
+   */
+  cutFaceMultiStyle?: 'faceOnly' | 'bodyOnly' | 'both'
+  // Cut Face 多刀模式下主模型不透明度（faceOnly / both，0~1）
+  faceOnlyBaseOpacity?: number
+  // Cut Face 多刀覆盖层透明度（bodyOnly / both，0~1）
+  cutFaceOverlayOpacity?: number
+  // Cut Body：cut depth 被切除体覆盖层透明度（0~1）
+  cutBodyRemovedOpacity?: number
+  // Cut Body：N 刀分层覆盖透明度（0~1）
+  cutBodyLayeredOpacity?: number
 }
 
 export function PreciseDualModeModel({ 
@@ -264,7 +278,12 @@ export function PreciseDualModeModel({
   mode = 'cutFace',
   capColor = '#ff6b6b',
   showCutBodyWireframe = false,
-  multiCutCount = 0
+  multiCutCount = 0,
+  cutFaceMultiStyle = 'faceOnly',
+  faceOnlyBaseOpacity = 0.45,
+  cutFaceOverlayOpacity = 0.82,
+  cutBodyRemovedOpacity = 0.5,
+  cutBodyLayeredOpacity = 0.72
 }: PreciseDualModeModelProps) {
   const { nodes, materials } = useGLTF('/Hohenzollern_Castle_optimized.glb') as GLTFResult
 
@@ -466,7 +485,219 @@ export function PreciseDualModeModel({
     return layers
   }, [mode, projectionRange, clippingPlane, cutDepth, effectiveMultiCutCount, cutNormal, volumeDistribution])
 
+  // ⚠️ Cut Face 模式：等体积 N 刀，每刀生成一个切割平面位置
+  const sequentialCutFaceLayers = useMemo(() => {
+    type CutFaceLayer = { index: number; cutDistance: number; color: string; plane: THREE.Plane }
+    if (
+      mode !== 'cutFace' ||
+      !projectionRange ||
+      cutDepth >= 100 ||
+      effectiveMultiCutCount <= 0 ||
+      !volumeDistribution
+    ) {
+      return [] as CutFaceLayer[]
+    }
+
+    const { positions, cumulativeVolumes, totalVolume } = volumeDistribution
+
+    const remainingMin = cutDepth === 0
+      ? projectionRange.min
+      : (clippingPlane ? -clippingPlane.constant : projectionRange.min)
+    const remainingMax = projectionRange.max
+    const remainingSpan = remainingMax - remainingMin
+
+    if (remainingSpan <= 0.0001) return [] as CutFaceLayer[]
+
+    let startVolume = 0
+    for (let i = 0; i < positions.length; i++) {
+      if (positions[i] >= remainingMin) {
+        startVolume = i > 0 ? cumulativeVolumes[i - 1] : 0
+        break
+      }
+    }
+
+    let endVolume = totalVolume
+    for (let i = 0; i < positions.length; i++) {
+      if (positions[i] >= remainingMax) {
+        endVolume = cumulativeVolumes[i]
+        break
+      }
+    }
+
+    const actualTotalVolume = endVolume - startVolume
+    if (actualTotalVolume <= 0.0001) return [] as CutFaceLayer[]
+
+    const targetVolumePerSlice = actualTotalVolume / (effectiveMultiCutCount + 1)
+
+    const layers: CutFaceLayer[] = []
+    let currentStartDistance = remainingMin
+    let currentVolume = startVolume
+
+    for (let index = 0; index < effectiveMultiCutCount; index++) {
+      const cutDistance = findCutPositionByVolume(
+        volumeDistribution,
+        targetVolumePerSlice,
+        currentStartDistance,
+        currentVolume
+      )
+
+      layers.push({
+        index,
+        cutDistance,
+        color: MULTI_CUT_COLORS[index % MULTI_CUT_COLORS.length],
+        plane: new THREE.Plane(cutNormal.clone(), -cutDistance),
+      })
+
+      let endVol = totalVolume
+      for (let i = 0; i < positions.length; i++) {
+        if (positions[i] >= cutDistance) {
+          endVol = cumulativeVolumes[i]
+          break
+        }
+      }
+
+      currentStartDistance = cutDistance
+      currentVolume = endVol
+    }
+
+    console.log('✅ Cut Face 体积分割完成，共', layers.length, '个截面')
+    return layers
+  }, [mode, projectionRange, clippingPlane, cutDepth, effectiveMultiCutCount, cutNormal, volumeDistribution])
+
+  // ⚠️ Cut Face 模式：为每个内切面生成 stencil 材质和 cap 几何体
+  const sequentialCapData = useMemo(() => {
+    if (mode !== 'cutFace' || sequentialCutFaceLayers.length === 0 || !modelBounds) return []
+
+    return sequentialCutFaceLayers.map((layer) => {
+      const box = modelBounds.box
+      const diagonal = Math.sqrt(
+        Math.pow(box.max.x - box.min.x, 2) +
+        Math.pow(box.max.y - box.min.y, 2) +
+        Math.pow(box.max.z - box.min.z, 2)
+      )
+
+      const geometry = new THREE.PlaneGeometry(diagonal * 2, diagonal * 2, 1, 1)
+      const quaternion = new THREE.Quaternion()
+      quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), layer.plane.normal)
+      geometry.applyQuaternion(quaternion)
+      const pos = layer.plane.normal.clone().multiplyScalar(-layer.plane.constant)
+      geometry.translate(pos.x, pos.y, pos.z)
+
+      const stencilBack = new THREE.MeshBasicMaterial({
+        side: THREE.BackSide,
+        clippingPlanes: [layer.plane],
+        colorWrite: false,
+        depthWrite: false,
+        depthTest: false,
+        stencilWrite: true,
+        stencilFunc: THREE.AlwaysStencilFunc,
+        stencilFail: THREE.KeepStencilOp,
+        stencilZFail: THREE.KeepStencilOp,
+        stencilZPass: THREE.IncrementWrapStencilOp,
+      })
+
+      const stencilFront = new THREE.MeshBasicMaterial({
+        side: THREE.FrontSide,
+        clippingPlanes: [layer.plane],
+        colorWrite: false,
+        depthWrite: false,
+        depthTest: false,
+        stencilWrite: true,
+        stencilFunc: THREE.AlwaysStencilFunc,
+        stencilFail: THREE.KeepStencilOp,
+        stencilZFail: THREE.KeepStencilOp,
+        stencilZPass: THREE.DecrementWrapStencilOp,
+      })
+
+      const cap = new THREE.MeshBasicMaterial({
+        color: layer.color,
+        side: THREE.DoubleSide,
+        transparent: false,
+        opacity: 1.0,
+        depthWrite: true,
+        depthTest: true,
+        fog: false,
+        stencilWrite: true,
+        stencilRef: 0,
+        stencilFunc: THREE.NotEqualStencilFunc,
+        stencilFail: THREE.ReplaceStencilOp,
+        stencilZFail: THREE.ReplaceStencilOp,
+        stencilZPass: THREE.ReplaceStencilOp,
+      })
+
+      return { geometry, stencilBack, stencilFront, cap }
+    })
+  }, [mode, sequentialCutFaceLayers, modelBounds])
+
+  // ⚠️ Cut Face Body 样式：将 N 个截面位置转换为 N 个实体叠加色块（同 Cut Body 的 sequentialCutLayers）
+  // faceOnly 模式下也会生成，但透明度更低，仅用于压暗切割区域使截面更清晰可见
+  const sequentialFaceBodySlabData = useMemo(() => {
+    if (
+      mode !== 'cutFace' ||
+      sequentialCutFaceLayers.length === 0 ||
+      !projectionRange ||
+      cutFaceMultiStyle === 'faceOnly'
+    ) return [] as { index: number; color: string; clippingPlanes: THREE.Plane[] }[]
+
+    const remainingMin = cutDepth === 0
+      ? projectionRange.min
+      : (clippingPlane ? -clippingPlane.constant : projectionRange.min)
+    const remainingSpan = projectionRange.max - remainingMin
+    const epsilon = Math.min(remainingSpan * 0.001, 1e-4)
+
+    return sequentialCutFaceLayers.map((layer, i) => {
+      const startDist = i === 0
+        ? remainingMin + epsilon
+        : sequentialCutFaceLayers[i - 1].cutDistance
+      const endDist = layer.cutDistance - epsilon
+      return {
+        index: i,
+        color: layer.color,
+        clippingPlanes: [
+          createForwardPlane(cutNormal, startDist),
+          createReversePlane(cutNormal, endDist),
+        ],
+      }
+    })
+  }, [mode, sequentialCutFaceLayers, projectionRange, clippingPlane, cutDepth, cutNormal, cutFaceMultiStyle])
+
+  const sequentialFaceBodySlabMaterials = useMemo(() => {
+    if (mode !== 'cutFace' || sequentialFaceBodySlabData.length === 0) return []
+
+    // bodyOnly / both 均支持用户调节覆盖层透明度
+    const opacity = Math.min(1, Math.max(0.05, cutFaceOverlayOpacity))
+    const emissiveIntensity = cutFaceMultiStyle === 'bodyOnly' ? 0.42 : 0.28
+
+    return sequentialFaceBodySlabData.map((slab) => {
+      const material = materials.HZ3_Material_u1_v1.clone()
+      const slabColor = new THREE.Color(slab.color)
+
+      material.color = slabColor.clone()
+      material.emissive = slabColor.clone()
+      material.emissiveIntensity = emissiveIntensity
+      material.side = THREE.DoubleSide
+      material.transparent = true
+      material.opacity = opacity
+      material.clearcoat = 0.5
+      material.clearcoatRoughness = 0.35
+      material.clippingPlanes = slab.clippingPlanes
+      material.clipIntersection = false
+      material.clipShadows = true
+      material.depthWrite = false
+      material.needsUpdate = true
+
+      return material
+    })
+  }, [mode, sequentialFaceBodySlabData, materials.HZ3_Material_u1_v1, cutFaceMultiStyle, cutFaceOverlayOpacity])
+
   const isMultiCutActive = mode === 'cutBody' && sequentialCutLayers.length > 0 && cutDepth < 100
+  const isMultiCutFaceActive = mode === 'cutFace' && sequentialCutFaceLayers.length > 0 && cutDepth < 100
+  const showMultiCutFaceCaps = isMultiCutFaceActive && cutFaceMultiStyle !== 'bodyOnly'
+  const showMultiCutFaceSlabs = isMultiCutFaceActive && cutFaceMultiStyle !== 'faceOnly'
+  const dimMainModelForFaceCuts = isMultiCutFaceActive && cutFaceMultiStyle !== 'bodyOnly'
+  const clampedFaceOnlyBaseOpacity = Math.min(1, Math.max(0.05, faceOnlyBaseOpacity))
+  const clampedCutBodyRemovedOpacity = Math.min(1, Math.max(0.05, cutBodyRemovedOpacity))
+  const clampedCutBodyLayeredOpacity = Math.min(1, Math.max(0.05, cutBodyLayeredOpacity))
 
   // 主材质 - 始终应用裁剪
   const mainMaterial = useMemo(() => {
@@ -493,9 +724,17 @@ export function PreciseDualModeModel({
       material.clipShadows = true
       material.needsUpdate = true
     }
-    
+
+    // FaceOnly / Both: 降低主模型不透明度，让彩色截面更容易被看见
+    if (mode === 'cutFace' && dimMainModelForFaceCuts) {
+      material.transparent = true
+      material.opacity = clampedFaceOnlyBaseOpacity
+      material.depthWrite = false
+      material.needsUpdate = true
+    }
+
     return material
-  }, [materials.HZ3_Material_u1_v1, clippingPlane, isMultiCutActive, cutNormal, sequentialCutLayers])
+  }, [materials.HZ3_Material_u1_v1, clippingPlane, isMultiCutActive, cutNormal, sequentialCutLayers, mode, dimMainModelForFaceCuts, clampedFaceOnlyBaseOpacity])
 
   const showCutSection = showCutPlane && cutDepth > 0 && cutDepth < 100
 
@@ -603,7 +842,7 @@ export function PreciseDualModeModel({
     const material = materials.HZ3_Material_u1_v1.clone()
     material.side = THREE.DoubleSide
     material.transparent = true
-    material.opacity = 0.5 //Cut Body被切割区域颜色透明度（越大透明度越高）
+    material.opacity = clampedCutBodyRemovedOpacity
     material.clippingPlanes = [reversePlane]
     material.clipShadows = true
 
@@ -625,7 +864,7 @@ export function PreciseDualModeModel({
     })
 
     return material
-  }, [clippingPlane, mode, materials.HZ3_Material_u1_v1])
+  }, [clippingPlane, mode, materials.HZ3_Material_u1_v1, clampedCutBodyRemovedOpacity])
 
   // Cut Body 截面填充：使用原材质颜色的提亮版，避免纯红色块
   const cutBodyCapMaterial = useMemo(() => {
@@ -674,26 +913,34 @@ export function PreciseDualModeModel({
     return sequentialCutLayers.map((layer) => {
       const material = materials.HZ3_Material_u1_v1.clone()
       const layerColor = new THREE.Color(layer.color)
+      const baseColor = materials.HZ3_Material_u1_v1.color.clone()
+      const tintStrength = clampedCutBodyLayeredOpacity
 
-      material.color = layerColor.clone()
+      // Keep the original surface visible, and use the slider as tint strength for the new pure color.
+      material.color = baseColor.lerp(layerColor, tintStrength)
       material.emissive = layerColor.clone()
-      material.emissiveIntensity = 0.28
+      material.emissiveIntensity = 0.08 + (0.12 * tintStrength)
       material.side = THREE.DoubleSide
-      material.transparent = true
-      material.opacity = 0.72
+      material.transparent = false
+      material.opacity = 1.0
+      material.roughness = 0.22
+      material.metalness = 0.08
       material.clearcoat = 0.5
       material.clearcoatRoughness = 0.35
       material.clippingPlanes = layer.clippingPlanes
       // Three.js clipping with this plane pair uses clipIntersection=false to keep slab interval.
       material.clipIntersection = false
       material.clipShadows = true
-      // depthWrite = false 消除 Z-fighting（同几何体多层叠加时无需写深度）
-      material.depthWrite = false
+      // Write depth for clearer slab separation; polygon offset avoids coplanar flicker.
+      material.depthWrite = true
+      material.polygonOffset = true
+      material.polygonOffsetFactor = -1
+      material.polygonOffsetUnits = -1
       material.needsUpdate = true
 
       return material
     })
-  }, [mode, sequentialCutLayers, materials.HZ3_Material_u1_v1])
+  }, [mode, sequentialCutLayers, materials.HZ3_Material_u1_v1, clampedCutBodyLayeredOpacity])
 
   if (!mainMaterial) return null
 
@@ -801,6 +1048,46 @@ export function PreciseDualModeModel({
           }}
         />
       )}
+
+      {/* Cut Face 模式：Apply N Cuts - 按等体积生成 N 个彩色截面（faceOnly / both） */}
+      {showMultiCutFaceCaps && showCutSection && sequentialCapData.map((capData, index) => {
+        const baseOrder = 4 + index * 3
+        return (
+          <React.Fragment key={`cut-face-multi-${sequentialCutFaceLayers[index].index}`}>
+            {/* Stencil back pass：背面写 stencil，标记实体内部 */}
+            <mesh
+              geometry={nodes.HZ3.geometry}
+              material={capData.stencilBack}
+              renderOrder={baseOrder}
+            />
+            {/* Stencil front pass：正面反写 stencil，精确边界 */}
+            <mesh
+              geometry={nodes.HZ3.geometry}
+              material={capData.stencilFront}
+              renderOrder={baseOrder + 1}
+            />
+            {/* 彩色截面 cap：仅在 stencil != 0 的区域绘制 */}
+            <mesh
+              geometry={capData.geometry}
+              material={capData.cap}
+              renderOrder={baseOrder + 2}
+              onAfterRender={(renderer: THREE.WebGLRenderer) => {
+                renderer.clearStencil()
+              }}
+            />
+          </React.Fragment>
+        )
+      })}
+
+      {/* Cut Face 模式：Apply N Cuts - 彩色实体覆盖层（bodyOnly / both） */}
+      {showMultiCutFaceSlabs && showCutSection && sequentialFaceBodySlabMaterials.map((material, index) => (
+        <mesh
+          key={`cut-face-body-slab-${index}`}
+          geometry={nodes.HZ3.geometry}
+          material={material}
+          renderOrder={50 + index * 2}
+        />
+      ))}
     </group>
   )
 }

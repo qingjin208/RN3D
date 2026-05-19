@@ -15,6 +15,11 @@ export default function CutCakeApp() {
   const [showCutBodyWireframe, setShowCutBodyWireframe] = useState<boolean>(false)
   const [pendingCutCount, setPendingCutCount] = useState<number>(3)
   const [appliedCutCount, setAppliedCutCount] = useState<number>(0)
+  const [cutFaceMultiStyle, setCutFaceMultiStyle] = useState<'faceOnly' | 'bodyOnly' | 'both'>('faceOnly')
+  const [faceOnlyBaseOpacity, setFaceOnlyBaseOpacity] = useState<number>(0.45)
+  const [cutFaceOverlayOpacity, setCutFaceOverlayOpacity] = useState<number>(0.82)
+  const [cutBodyRemovedOpacity, setCutBodyRemovedOpacity] = useState<number>(0.5)
+  const [cutBodyLayeredOpacity, setCutBodyLayeredOpacity] = useState<number>(0.72)
 
   const clampedPendingCutCount = Math.max(0, Math.min(12, Math.floor(pendingCutCount || 0)))
 
@@ -44,6 +49,11 @@ export default function CutCakeApp() {
               capColor="#ff6b6b"
               showCutBodyWireframe={showCutBodyWireframe}
               multiCutCount={appliedCutCount}
+              cutFaceMultiStyle={cutFaceMultiStyle}
+              faceOnlyBaseOpacity={faceOnlyBaseOpacity}
+              cutFaceOverlayOpacity={cutFaceOverlayOpacity}
+              cutBodyRemovedOpacity={cutBodyRemovedOpacity}
+              cutBodyLayeredOpacity={cutBodyLayeredOpacity}
             />
           </Suspense>
           <OrbitControls ref={ref} autoRotate={false} />
@@ -272,6 +282,211 @@ export default function CutCakeApp() {
             )}
           </div>
 
+          {/* Cut Face 多刀显示模式 */}
+          {mode === 'cutFace' && appliedCutCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>Face N-Cuts View:</label>
+              <button
+                onClick={() => setCutFaceMultiStyle('faceOnly')}
+                style={{
+                  padding: '8px 12px',
+                  background: cutFaceMultiStyle === 'faceOnly' ? '#4CAF50' : '#2a2a2a',
+                  border: cutFaceMultiStyle === 'faceOnly' ? '2px solid #4CAF50' : '1px solid #444',
+                  borderRadius: '6px',
+                  color: cutFaceMultiStyle === 'faceOnly' ? 'white' : '#aaa',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                Face Only
+              </button>
+              <button
+                onClick={() => setCutFaceMultiStyle('bodyOnly')}
+                style={{
+                  padding: '8px 12px',
+                  background: cutFaceMultiStyle === 'bodyOnly' ? '#FF9800' : '#2a2a2a',
+                  border: cutFaceMultiStyle === 'bodyOnly' ? '2px solid #FF9800' : '1px solid #444',
+                  borderRadius: '6px',
+                  color: cutFaceMultiStyle === 'bodyOnly' ? 'white' : '#aaa',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                Body Overlay
+              </button>
+              <button
+                onClick={() => setCutFaceMultiStyle('both')}
+                style={{
+                  padding: '8px 12px',
+                  background: cutFaceMultiStyle === 'both' ? '#00ACC1' : '#2a2a2a',
+                  border: cutFaceMultiStyle === 'both' ? '2px solid #00BCD4' : '1px solid #444',
+                  borderRadius: '6px',
+                  color: cutFaceMultiStyle === 'both' ? 'white' : '#aaa',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                Both
+              </button>
+            </div>
+          )}
+
+          {/* Face/Both 主模型不透明度（用户输入） */}
+          {mode === 'cutFace' && appliedCutCount > 0 && cutFaceMultiStyle !== 'bodyOnly' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>
+                Model Opacity (Face/Both): {faceOnlyBaseOpacity.toFixed(2)}
+              </label>
+              <input
+                type="range"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={faceOnlyBaseOpacity}
+                onChange={(e) => setFaceOnlyBaseOpacity(Number(e.target.value))}
+                style={{ width: '160px', cursor: 'pointer' }}
+              />
+              <input
+                type="number"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={faceOnlyBaseOpacity}
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (!Number.isFinite(value)) return
+                  setFaceOnlyBaseOpacity(Math.max(0.05, Math.min(1, value)))
+                }}
+                style={{
+                  width: '70px',
+                  padding: '8px',
+                  background: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  color: 'white',
+                  fontSize: '12px'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Body/Both 覆盖层透明度（用户输入） */}
+          {mode === 'cutFace' && appliedCutCount > 0 && cutFaceMultiStyle !== 'faceOnly' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>
+                Overlay Opacity (Body/Both): {cutFaceOverlayOpacity.toFixed(2)}
+              </label>
+              <input
+                type="range"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={cutFaceOverlayOpacity}
+                onChange={(e) => setCutFaceOverlayOpacity(Number(e.target.value))}
+                style={{ width: '160px', cursor: 'pointer' }}
+              />
+              <input
+                type="number"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={cutFaceOverlayOpacity}
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (!Number.isFinite(value)) return
+                  setCutFaceOverlayOpacity(Math.max(0.05, Math.min(1, value)))
+                }}
+                style={{
+                  width: '70px',
+                  padding: '8px',
+                  background: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  color: 'white',
+                  fontSize: '12px'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Cut Body：cut depth 被切除体透明度 */}
+          {mode === 'cutBody' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>
+                Cut Body Depth Opacity: {cutBodyRemovedOpacity.toFixed(2)}
+              </label>
+              <input
+                type="range"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={cutBodyRemovedOpacity}
+                onChange={(e) => setCutBodyRemovedOpacity(Number(e.target.value))}
+                style={{ width: '160px', cursor: 'pointer' }}
+              />
+              <input
+                type="number"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={cutBodyRemovedOpacity}
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (!Number.isFinite(value)) return
+                  setCutBodyRemovedOpacity(Math.max(0.05, Math.min(1, value)))
+                }}
+                style={{
+                  width: '70px',
+                  padding: '8px',
+                  background: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  color: 'white',
+                  fontSize: '12px'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Cut Body：N 刀分层透明度 */}
+          {mode === 'cutBody' && appliedCutCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '12px', color: '#aaa' }}>
+                Cut Body N-Cuts Opacity: {cutBodyLayeredOpacity.toFixed(2)}
+              </label>
+              <input
+                type="range"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={cutBodyLayeredOpacity}
+                onChange={(e) => setCutBodyLayeredOpacity(Number(e.target.value))}
+                style={{ width: '160px', cursor: 'pointer' }}
+              />
+              <input
+                type="number"
+                min="0.05"
+                max="1"
+                step="0.01"
+                value={cutBodyLayeredOpacity}
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (!Number.isFinite(value)) return
+                  setCutBodyLayeredOpacity(Math.max(0.05, Math.min(1, value)))
+                }}
+                style={{
+                  width: '70px',
+                  padding: '8px',
+                  background: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  color: 'white',
+                  fontSize: '12px'
+                }}
+              />
+            </div>
+          )}
+
           {/* 重置按钮 */}
           <button
             onClick={() => {
@@ -281,6 +496,11 @@ export default function CutCakeApp() {
               setShowCutBodyWireframe(false)
               setPendingCutCount(3)
               setAppliedCutCount(0)
+              setCutFaceMultiStyle('faceOnly')
+              setFaceOnlyBaseOpacity(0.45)
+              setCutFaceOverlayOpacity(0.82)
+              setCutBodyRemovedOpacity(0.5)
+              setCutBodyLayeredOpacity(0.72)
             }}
             style={{
               padding: '10px 20px',
