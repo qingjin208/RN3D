@@ -1,5 +1,7 @@
 # DJI3D Local GLB Viewer
 
+# React项目：Hohenzollern_Castle_optimized
+
 This project is ready to use. It loads a local GLB model and supports rotate, zoom, and pan in the Home tab.
 
 ## Model path
@@ -47,6 +49,4 @@ npx expo start --tunnel -c
 cmd /c "cd /d C:\Users\Neil.Zhen\Desktop\DJI3D\DJI3D & npx expo start --tunnel -c"
 ```
 
-新增或删除模型文件后，执行 npm run models:sync
-重启 Expo（建议清缓存）：npx expo start -c
-下拉里就会更新为最新文件列表
+
