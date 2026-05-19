@@ -737,6 +737,8 @@ export function PreciseDualModeModel({
   }, [materials.HZ3_Material_u1_v1, clippingPlane, isMultiCutActive, cutNormal, sequentialCutLayers, mode, dimMainModelForFaceCuts, clampedFaceOnlyBaseOpacity])
 
   const showCutSection = showCutPlane && cutDepth > 0 && cutDepth < 100
+  // Multi-cut face caps/slabs should also work at depth 0 (full-body range split).
+  const showMultiCutFaceSection = showCutPlane && cutDepth < 100
 
   // Cut Face 模式：创建与裁剪面重合的大平面，最终由 stencil 裁成精确轮廓
   const capGeometry = useMemo(() => {
@@ -1050,7 +1052,7 @@ export function PreciseDualModeModel({
       )}
 
       {/* Cut Face 模式：Apply N Cuts - 按等体积生成 N 个彩色截面（faceOnly / both） */}
-      {showMultiCutFaceCaps && showCutSection && sequentialCapData.map((capData, index) => {
+      {showMultiCutFaceCaps && showMultiCutFaceSection && sequentialCapData.map((capData, index) => {
         const baseOrder = 4 + index * 3
         return (
           <React.Fragment key={`cut-face-multi-${sequentialCutFaceLayers[index].index}`}>
@@ -1080,7 +1082,7 @@ export function PreciseDualModeModel({
       })}
 
       {/* Cut Face 模式：Apply N Cuts - 彩色实体覆盖层（bodyOnly / both） */}
-      {showMultiCutFaceSlabs && showCutSection && sequentialFaceBodySlabMaterials.map((material, index) => (
+      {showMultiCutFaceSlabs && showMultiCutFaceSection && sequentialFaceBodySlabMaterials.map((material, index) => (
         <mesh
           key={`cut-face-body-slab-${index}`}
           geometry={nodes.HZ3.geometry}
