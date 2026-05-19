@@ -1,12 +1,12 @@
-import { RN3DElement } from '../../Element/RN3DElement'
+import { ITL3DElement } from '../../Element/ITL3DElement'
 import './App.css'
 
 function App() {
   return (
     <main className="page">
-      <h1 className="title">RN3D Element Demo</h1>
+      <h1 className="title">ITL3D Element Demo</h1>
       <div className="frame">
-        <RN3DElement
+        <ITL3DElement
           modelUrl="/Hohenzollern_Castle_optimized.glb"
           mode="cutBody"
           cutDepth={35}
@@ -16,7 +16,7 @@ function App() {
           cutFaceMaskColor="#ff4d4f"
           cutBodyMaskColor="#ffffff"
           showCutBodyWireframe={false}
-          faceNCutsView="both"
+          faceNCutsView="FaceABody"
           modelOpacityForFaceOrBoth={0.65}
           overlayOpacityForBodyOrBoth={0.65}
           cutBodyDepthOpacity={0.7}

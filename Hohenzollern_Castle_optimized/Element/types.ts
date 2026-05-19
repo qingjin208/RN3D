@@ -1,12 +1,12 @@
 import type { CSSProperties } from 'react'
 
-export type RN3DMode = 'cutFace' | 'cutBody'
-export type FaceNCutsView = 'faceOnly' | 'bodyOnly' | 'both'
+export type ITL3DMode = 'cutFace' | 'cutBody'
+export type FaceNCutsView = 'Face' | 'Body' | 'FaceABody'
 
-export interface RN3DElementProps {
+export interface ITL3DElementProps {
   modelUrl?: string
 
-  mode?: RN3DMode
+  mode?: ITL3DMode
   cutDepth?: number
   cutAngle?: number
   cutN?: number

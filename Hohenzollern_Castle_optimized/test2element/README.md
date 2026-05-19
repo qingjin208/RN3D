@@ -1,6 +1,6 @@
 # test2element
 
-这是一个空白 Vite + React + TypeScript 示例项目，用于演示如何直接使用上层目录的 `Element/RN3DElement.tsx`。
+这是一个空白 Vite + React + TypeScript 示例项目，用于演示如何直接使用上层目录的 `Element/ITL3DElement.tsx`。
 
 ## What this demo does
 

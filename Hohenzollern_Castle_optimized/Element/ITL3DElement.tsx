@@ -2,7 +2,7 @@ import React, { Suspense, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { PreciseDualModeModel } from '../src/PreciseDualModeModel'
-import type { RN3DElementProps } from './types'
+import type { ITL3DElementProps } from './types'
 
 const DEFAULT_MODEL_URL = '/Hohenzollern_Castle_optimized.glb'
 
@@ -18,7 +18,7 @@ function toClockCameraPosition(orientation: number, radius: number, z: number): 
   return [Math.cos(theta) * radius, Math.sin(theta) * radius, z]
 }
 
-export function RN3DElement({
+export function ITL3DElement({
   modelUrl = DEFAULT_MODEL_URL,
   mode = 'cutFace',
   cutDepth = 30,
@@ -28,7 +28,7 @@ export function RN3DElement({
   cutFaceMaskColor = '#ff6b6b',
   cutBodyMaskColor,
   showCutBodyWireframe = false,
-  faceNCutsView = 'faceOnly',
+  faceNCutsView = 'FaceABody',
   modelOpacityForFaceOrBoth = 0.45,
   overlayOpacityForBodyOrBoth = 0.82,
   cutBodyDepthOpacity = 0.5,
@@ -39,7 +39,7 @@ export function RN3DElement({
   autoRotate = false,
   className,
   style,
-}: RN3DElementProps) {
+}: ITL3DElementProps) {
   const cameraPosition = useMemo(() => toClockCameraPosition(orientation, 10, 5), [orientation])
   const multiCutCount = Math.max(0, Math.floor(Number.isFinite(cutN as number) ? (cutN as number) : 0))
   const resolvedShowCuttingSurface =

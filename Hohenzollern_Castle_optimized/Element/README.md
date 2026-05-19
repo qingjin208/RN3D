@@ -1,10 +1,10 @@
-# RN3DElement
+# ITL3DElement
 
-`RN3DElement` 将当前项目里的 3D 切割模型封装为可复用 React 组件，渲染能力与 `src/PreciseDualModeModel.tsx` 保持一致。
+`ITL3DElement` 将当前项目里的 3D 切割模型封装为可复用 React 组件，渲染能力与 `src/PreciseDualModeModel.tsx` 保持一致。
 
 ## Files
 
-- `Element/RN3DElement.tsx`: 组件实现
+- `Element/ITL3DElement.tsx`: 组件实现
 - `Element/types.ts`: 参数类型
 - `Element/index.ts`: 导出入口
 
@@ -12,12 +12,12 @@
 
 ```tsx
 import React from 'react'
-import { RN3DElement } from './Element'
+import { ITL3DElement } from './Element'
 
 export default function Demo() {
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      <RN3DElement
+      <ITL3DElement
         modelUrl="/Hohenzollern_Castle_optimized.glb"
         mode="cutFace"
         cutDepth={30}

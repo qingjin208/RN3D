@@ -1,3 +1,3 @@
-export { RN3DElement } from './RN3DElement'
-export type { RN3DElementProps, RN3DMode, FaceNCutsView } from './types'
+export { ITL3DElement } from './ITL3DElement'
+export type { ITL3DElementProps, ITL3DMode, FaceNCutsView } from './types'
 
