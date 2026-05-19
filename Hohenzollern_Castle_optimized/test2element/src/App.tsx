@@ -16,7 +16,7 @@ function App() {
           cutFaceMaskColor="#ff4d4f"
           cutBodyMaskColor="#ffffff"
           showCutBodyWireframe={false}
-          faceNCutsView="FaceABody"
+          faceNCutsView="FaceAndBody"
           modelOpacityForFaceOrBoth={0.65}
           overlayOpacityForBodyOrBoth={0.65}
           cutBodyDepthOpacity={0.7}

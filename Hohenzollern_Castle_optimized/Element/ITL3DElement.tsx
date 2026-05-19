@@ -28,7 +28,7 @@ export function ITL3DElement({
   cutFaceMaskColor = '#ff6b6b',
   cutBodyMaskColor,
   showCutBodyWireframe = false,
-  faceNCutsView = 'FaceABody',
+  faceNCutsView = 'FaceAndBody',
   modelOpacityForFaceOrBoth = 0.45,
   overlayOpacityForBodyOrBoth = 0.82,
   cutBodyDepthOpacity = 0.5,

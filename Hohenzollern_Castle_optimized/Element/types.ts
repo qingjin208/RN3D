@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 
 export type ITL3DMode = 'cutFace' | 'cutBody'
-export type FaceNCutsView = 'Face' | 'Body' | 'FaceABody'
+export type FaceNCutsView = 'Face' | 'Body' | 'FaceAndBody'
 
 export interface ITL3DElementProps {
   modelUrl?: string
