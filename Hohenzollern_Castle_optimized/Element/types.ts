@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 export type ITL3DMode = 'cutFace' | 'cutBody'
 export type FaceNCutsView = 'Face' | 'Body' | 'FaceAndBody'
 
-export interface ITL3DElementProps {
+export interface ITL3DProps {
   modelUrl?: string
 
   mode?: ITL3DMode

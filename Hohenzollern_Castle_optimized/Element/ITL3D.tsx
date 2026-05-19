@@ -1,8 +1,8 @@
 import React, { Suspense, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import { PreciseDualModeModel } from '../src/PreciseDualModeModel'
-import type { ITL3DElementProps } from './types'
+import { PreciseDualModeModel } from './PreciseDualModeModel'
+import type { ITL3DProps } from './types'
 
 const DEFAULT_MODEL_URL = '/Hohenzollern_Castle_optimized.glb'
 
@@ -11,14 +11,13 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function toClockCameraPosition(orientation: number, radius: number, z: number): [number, number, number] {
-  // 12点方向为 y 负半轴，3点方向为 x 正半轴。
   const safe = Number.isFinite(orientation) ? orientation : 4
   const n = ((Math.round(safe) - 1 + 12) % 12) + 1
   const theta = ((n - 3) * Math.PI) / 6
   return [Math.cos(theta) * radius, Math.sin(theta) * radius, z]
 }
 
-export function ITL3DElement({
+export function ITL3D({
   modelUrl = DEFAULT_MODEL_URL,
   mode = 'cutFace',
   cutDepth = 30,
@@ -39,7 +38,7 @@ export function ITL3DElement({
   autoRotate = false,
   className,
   style,
-}: ITL3DElementProps) {
+}: ITL3DProps) {
   const cameraPosition = useMemo(() => toClockCameraPosition(orientation, 10, 5), [orientation])
   const multiCutCount = Math.max(0, Math.floor(Number.isFinite(cutN as number) ? (cutN as number) : 0))
   const resolvedShowCuttingSurface =

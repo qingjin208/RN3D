@@ -1,3 +1,3 @@
-export { ITL3DElement } from './ITL3DElement'
-export type { ITL3DElementProps, ITL3DMode, FaceNCutsView } from './types'
+export { ITL3D } from './ITL3D'
+export type { ITL3DProps, ITL3DMode, FaceNCutsView } from './types'
 
